@@ -1,0 +1,16 @@
+var user = app.activeDocument;
+var doc = app.open(new File('/Users/kathan/Developer/photoshop-mcp/test/fixtures/photo.jpg'));
+var out = { opened: doc.name };
+var t = doc.artLayers.add(); t.kind = LayerKind.TEXT; t.textItem.contents = 'Probe'; t.textItem.size = UnitValue(64, 'px'); t.textItem.position = [UnitValue(100,'px'), UnitValue(200,'px')];
+var g = doc.layerSets.add(); g.name = 'Grp';
+var inner = g.artLayers.add(); inner.name = 'Inner';
+var layers = [];
+__walk(function (d, path, depth) { layers.push({ path: path, depth: depth, info: __readLayerDesc(d) }); });
+out.layers = layers;
+out.active = __activeLayerIds();
+out.resolveByName = __resolveId('Inner');
+out.resolveByPath = __resolveId('Grp/Inner');
+doc.close(SaveOptions.DONOTSAVECHANGES);
+app.activeDocument = user;
+out.backTo = app.activeDocument.name;
+return out;
