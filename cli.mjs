@@ -74,7 +74,7 @@ try {
   if (!cmd || cmd === '--help' || cmd === '-h') usage();
   else if (cmd === 'doctor') {
     const { doctor } = await import('./src/doctor.mjs');
-    process.exitCode = (await doctor()) ? 0 : 1;
+    process.exitCode = (await doctor()).ok ? 0 : 1;
   } else if (cmd === 'help') {
     const t = getTool(rest[0] || '');
     if (!t) usage();

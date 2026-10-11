@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file:; style-src 'self' 'unsafe-inline'">
+<title>Photoshop MCP</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="drag"></div>
+<aside class="sidebar">
+  <div class="brand"><span class="brand-ps">Ps</span><span>MCP</span></div>
+  <nav>
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="activity">Activity <span class="pill" id="activity-count"></span></button>
+    <button class="tab" data-tab="gallery">Gallery</button>
+    <button class="tab" data-tab="checkpoints">Checkpoints</button>
+    <button class="tab" data-tab="doctor">Doctor</button>
+  </nav>
+  <div class="sidebar-foot">
+    <div class="status-dot" id="ps-dot"></div>
+    <div id="ps-short">Checking Photoshop…</div>
+    <div class="version" id="version"></div>
+  </div>
+</aside>
+
+<main>
+  <header class="toolbar">
+    <div id="ps-line" class="ps-line">Photoshop</div>
+    <div class="spacer"></div>
+    <button id="btn-undo" class="btn" title="Undo the agent's last step in the active document">Undo last step</button>
+    <button id="btn-revert" class="btn" title="Go back to the checkpoint taken before the agent's first edit">Revert to checkpoint</button>
+    <button id="btn-pause" class="btn danger">Pause edits</button>
+  </header>
+
+  <section class="panel active" id="tab-overview">
+    <div class="hero">
+      <h1>Let your AI agent work in Photoshop.</h1>
+      <p>This app bundles the Photoshop MCP server. Connect it to a client once, keep this app running, and every edit the agent makes shows up here — with a pause switch and undo.</p>
+    </div>
+    <h2>Connect</h2>
+    <div class="cards" id="clients"></div>
+    <div class="row small">
+      <label class="check"><input type="checkbox" id="exec"> Allow the ExtendScript escape hatch (<code>ps_exec</code>) — off by default</label>
+      <button class="btn" id="btn-json">Copy JSON for other clients</button>
+      <button class="btn" id="btn-open-ps">Open Photoshop</button>
+    </div>
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li>Open Photoshop (any document).</li>
+      <li>In your client, ask: <em>“Run ps_status”</em>. macOS asks once to allow controlling Photoshop — allow it.</li>
+      <li>Then ask for real work: <em>“Grade this photo warm and cinematic, non-destructively, and export a JPEG.”</em></li>
+    </ol>
+    <p class="muted">Every edit is one undo step and rolls back on failure. A checkpoint is taken before the agent's first edit. The agent can't overwrite your files without <code>overwrite: true</code>.</p>
+    <div class="row small">
+      <label class="check"><input type="checkbox" id="login"> Open at login (stays in the menu bar)</label>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-activity">
+    <div class="row"><h2>Activity</h2><div class="spacer"></div><input id="filter" placeholder="filter: tool, error, doc…"></div>
+    <div class="list" id="activity"></div>
+  </section>
+
+  <section class="panel" id="tab-gallery">
+    <h2>Exports</h2>
+    <p class="muted">Files the agent saved with <code>ps_document save</code>.</p>
+    <div class="grid" id="exports"></div>
+    <h2>What the agent looked at</h2>
+    <p class="muted">Every <code>ps_render</code> preview, newest first (last 300 kept).</p>
+    <div class="grid" id="renders"></div>
+  </section>
+
+  <section class="panel" id="tab-checkpoints">
+    <h2>Checkpoints</h2>
+    <p class="muted">Layered copies of unsaved work, taken before the agent's first edit of a document. Newest 20 / 7 days are kept. Open one in Photoshop to recover.</p>
+    <div class="list" id="checkpoints"></div>
+  </section>
+
+  <section class="panel" id="tab-doctor">
+    <div class="row"><h2>Doctor</h2><div class="spacer"></div><button class="btn" id="btn-doctor">Run again</button></div>
+    <div class="list" id="doctor"></div>
+    <p class="muted" id="server-path"></p>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

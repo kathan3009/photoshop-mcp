@@ -1,0 +1,37 @@
+{
+  "name": "photoshop-mcp-app",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Photoshop MCP — desktop app that bundles the server, connects it to Claude/Cursor/Codex and shows what the agent does in Photoshop",
+  "main": "main.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "prepare-server": "node scripts/prepare-server.mjs",
+    "dist": "npm run prepare-server && electron-builder --mac",
+    "shots": "node scripts/screenshots.mjs"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "dev.kathan.photoshop-mcp",
+    "productName": "Photoshop MCP",
+    "copyright": "MIT © Kathan",
+    "npmRebuild": false,
+    "files": ["main.mjs", "preload.cjs", "renderer/**", "build/trayTemplate*.png", "package.json"],
+    "extraResources": [{ "from": "server", "to": "server" }],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.icns",
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "identity": null,
+      "hardenedRuntime": false,
+      "artifactName": "Photoshop-MCP-${version}-${arch}.${ext}",
+      "extendInfo": { "LSUIElement": false }
+    },
+    "dmg": { "artifactName": "Photoshop-MCP-${version}-${arch}.${ext}", "writeUpdateInfo": false },
+    "directories": { "output": "dist" }
+  }
+}

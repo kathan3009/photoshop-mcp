@@ -12,6 +12,7 @@ Fixes (each one was hit while grading real raw photos through the server; all pr
 - **`psctl run file.jsx` ignored `docId`.**
 
 New:
+- **Desktop app** (`app/`, Electron): bundles the server so nobody installs Node, one-click Connect for Claude Code / Claude Desktop / Cursor / Codex (the app binary runs the server with `ELECTRON_RUN_AS_NODE`), live activity feed, gallery of renders and exports, checkpoints browser, doctor, Pause (kill switch honoured by the server via a flag file), Undo and Revert buttons, menu-bar tray, open at login. DMGs for arm64 and x64 on GitHub Releases.
 - `hueSaturation` per-color ranges: `reds|yellows|greens|cyans|blues|magentas: {hue, saturation, lightness}`.
 - `ps_set_layers {layer, ...props}` shorthand next to `updates: [...]`.
 - Files exported earlier in the same session may be re-exported without `overwrite: true`; the user's own files still need it.

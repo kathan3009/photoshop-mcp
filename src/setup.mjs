@@ -19,9 +19,15 @@ const NODE = nodeBinary();
 const has = (cmd) => { try { execFileSync('which', [cmd], { stdio: 'ignore' }); return true; } catch { return false; } };
 const run = (cmd, args) => execFileSync(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] }).toString();
 
+// How a client should launch the server. The desktop app passes its own runtime (the Electron binary
+// running as Node, with the bundled server), so users of the app never install Node.
+let RUNTIME = { command: NODE, args: [SERVER], env: {} };
+export function useRuntime(rt) { RUNTIME = { command: rt.command, args: rt.args, env: rt.env || {} }; }
+
 export function serverEntry(exec) {
-  const entry = { command: NODE, args: [SERVER] };
-  if (exec) entry.env = { PS_MCP_ALLOW_EXEC: '1' };
+  const entry = { command: RUNTIME.command, args: [...RUNTIME.args] };
+  const env = { ...RUNTIME.env, ...(exec ? { PS_MCP_ALLOW_EXEC: '1' } : {}) };
+  if (Object.keys(env).length) entry.env = env;
   return entry;
 }
 
@@ -33,9 +39,9 @@ function claudeCode(exec, remove) {
   if (!has('claude')) return remove ? null : 'Claude Code CLI not found — skipped (install from https://claude.com/claude-code, then re-run setup)';
   try { run('claude', ['mcp', 'remove', SERVER_NAME, '-s', 'user']); } catch {}
   if (remove) return 'removed';
-  const args = ['mcp', 'add', SERVER_NAME, '--scope', 'user'];
-  if (exec) args.push('-e', 'PS_MCP_ALLOW_EXEC=1');
-  run('claude', [...args, '--', NODE, SERVER]);
+  const entry = serverEntry(exec), args = ['mcp', 'add', SERVER_NAME, '--scope', 'user'];
+  for (const [k, v] of Object.entries(entry.env || {})) args.push('-e', `${k}=${v}`);
+  run('claude', [...args, '--', entry.command, ...entry.args]);
   return 'registered (user scope)';
 }
 
@@ -63,8 +69,9 @@ function codex(exec, remove) {
   const c = CLIENT_CONFIGS.codex;
   if (!existsSync(dirname(c.file))) return remove ? null : 'Codex CLI not installed — skipped';
   const text = existsSync(c.file) ? readFileSync(c.file, 'utf8') : '';
-  const header = `[mcp_servers.${SERVER_NAME}]`;
-  const block = `${header}\ncommand = ${JSON.stringify(NODE)}\nargs = [${JSON.stringify(SERVER)}]\n${exec ? `\n[mcp_servers.${SERVER_NAME}.env]\nPS_MCP_ALLOW_EXEC = "1"\n` : ''}`;
+  const entry = serverEntry(exec);
+  const envLines = Object.entries(entry.env || {}).map(([k, v]) => `${k} = ${JSON.stringify(v)}`).join('\n');
+  const block = `[mcp_servers.${SERVER_NAME}]\ncommand = ${JSON.stringify(entry.command)}\nargs = [${entry.args.map((a) => JSON.stringify(a)).join(', ')}]\n${envLines ? `\n[mcp_servers.${SERVER_NAME}.env]\n${envLines}\n` : ''}`;
   // Replace our own block (from a previous setup) and nothing else.
   const re = new RegExp(`\\n?\\[mcp_servers\\.${SERVER_NAME}\\][\\s\\S]*?(?=\\n\\[(?!mcp_servers\\.${SERVER_NAME}\\.)|$)`, 'g');
   const stripped = text.replace(re, '').replace(/\n{3,}/g, '\n\n');
@@ -99,15 +106,24 @@ function unlink(at, target) {
 
 export const CLIENTS = ['claude-code', 'claude-desktop', 'cursor', 'codex'];
 
+// Register one client; returns its status line (null = not installed).
+export function connect(id, exec) {
+  if (id === 'claude-code') return claudeCode(exec, false);
+  if (id === 'codex') return codex(exec, false);
+  return jsonClient(id, exec, false);
+}
+export function disconnect(id) {
+  if (id === 'claude-code') return claudeCode(false, true);
+  if (id === 'codex') return codex(false, true);
+  return jsonClient(id, false, true);
+}
+
 export async function setup({ exec = false, clients = CLIENTS, skill = true, bin = true, log = console.log } = {}) {
   if (process.platform !== 'darwin') throw new Error('photoshop-mcp runs on macOS only (it drives Photoshop over AppleScript).');
-  log(`photoshop-mcp setup — server: ${SERVER}${exec ? ' (ps_exec enabled)' : ''}\n`);
+  log(`photoshop-mcp setup — server: ${RUNTIME.args[RUNTIME.args.length - 1]}${exec ? ' (ps_exec enabled)' : ''}\n`);
   const report = (label, status) => { if (status) log(`• ${label}: ${status}`); };
-  for (const id of clients) {
-    if (id === 'claude-code') report('Claude Code', claudeCode(exec, false));
-    else if (id === 'codex') report('Codex CLI', codex(exec, false));
-    else report(CLIENT_CONFIGS[id].label, jsonClient(id, exec, false));
-  }
+  const labels = { 'claude-code': 'Claude Code', codex: 'Codex CLI' };
+  for (const id of clients) report(labels[id] || CLIENT_CONFIGS[id].label, connect(id, exec));
   if (skill) report('Agent skill', link(SKILL_SRC, SKILL_LINK));
   if (bin) {
     report('psctl', link(CLI, join(BIN_DIR, 'psctl')));
@@ -120,10 +136,8 @@ export async function setup({ exec = false, clients = CLIENTS, skill = true, bin
 
 export async function uninstall({ log = console.log } = {}) {
   const report = (label, status) => { if (status) log(`• ${label}: ${status}`); };
-  report('Claude Code', claudeCode(false, true));
-  report('Claude Desktop', jsonClient('claude-desktop', false, true));
-  report('Cursor', jsonClient('cursor', false, true));
-  report('Codex CLI', codex(false, true));
+  const labels = { 'claude-code': 'Claude Code', codex: 'Codex CLI' };
+  for (const id of CLIENTS) report(labels[id] || CLIENT_CONFIGS[id].label, disconnect(id));
   report('Agent skill', unlink(SKILL_LINK, SKILL_SRC));
   report('psctl', unlink(join(BIN_DIR, 'psctl'), CLI));
   report('photoshop-mcp', unlink(join(BIN_DIR, 'photoshop-mcp'), join(ROOT, 'bin/photoshop-mcp.mjs')));

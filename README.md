@@ -9,7 +9,15 @@ shell / scripts ─────────────────────�
 
 Every edit is **one undo step** that **rolls back automatically** if it fails. The agent gets a safety checkpoint before its first edit, can never overwrite your files without `overwrite: true`, and sees the picture (sRGB renders + histogram numbers) before and after each change.
 
-## Install (3 minutes)
+## Install
+
+### The app (recommended for most people)
+
+**[Download Photoshop MCP for Apple silicon](https://github.com/kathan3009/photoshop-mcp/releases/latest/download/Photoshop-MCP-1.2.0-arm64.dmg)** · [Intel Mac](https://github.com/kathan3009/photoshop-mcp/releases/latest/download/Photoshop-MCP-1.2.0-x64.dmg) · [all releases](https://github.com/kathan3009/photoshop-mcp/releases)
+
+Open the DMG, drag the app to Applications, launch it (it is unsigned: right-click → Open the first time) and press **Connect** next to your client. The app bundles the server, so there is nothing else to install — no Node, no plugin. It lives in the menu bar and shows every edit the agent makes: live activity, the renders it looked at, the files it exported, the checkpoints it took — with a **Pause** switch, **Undo last step** and **Revert to checkpoint**. Project page with a video: [kathandesai.com/photoshop-mcp](https://kathandesai.com/photoshop-mcp).
+
+### From source (3 minutes)
 
 You need macOS, [Node 18+](https://nodejs.org) and Photoshop 2026 (tested on 27.11; other versions are flagged, not blocked).
 
@@ -103,6 +111,7 @@ The raw probe scripts are in `probes/` (`node probes/run.mjs --scratch probes/p6
 ## Layout
 
 ```
+app/                    Electron desktop app (bundles the server; `npm run dist` builds the DMGs)
 bin/photoshop-mcp.mjs   setup | doctor | uninstall | serve
 server.mjs              MCP server (stdio) + agent instructions + per-connection session
 cli.mjs                 psctl CLI

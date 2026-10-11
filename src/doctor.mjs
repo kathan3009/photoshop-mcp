@@ -17,15 +17,17 @@ export function installedPhotoshopVersion() {
   return null;
 }
 
-// Which MCP clients point at this server right now.
+// Which MCP clients point at a photoshop-mcp server right now (this checkout, or the desktop app's bundled copy).
+const OURS = /photoshop-mcp[^"'\n]*server\.mjs|Photoshop MCP\.app/;
 export function registrations() {
   const out = {};
   const cc = sh('claude', ['mcp', 'get', SERVER_NAME]);
-  out['claude-code'] = cc && cc.includes(SERVER) ? (cc.includes('PS_MCP_ALLOW_EXEC=1') ? 'yes (ps_exec enabled)' : 'yes') : null;
+  out['claude-code'] = cc && OURS.test(cc) ? (cc.includes('PS_MCP_ALLOW_EXEC=1') ? 'yes (ps_exec enabled)' : 'yes') : null;
   for (const [id, c] of Object.entries(CLIENT_CONFIGS)) {
     if (!existsSync(c.file)) { out[id] = null; continue; }
     const text = readFileSync(c.file, 'utf8');
-    out[id] = text.includes(SERVER) ? 'yes' : null;
+    const m = text.match(new RegExp(`${SERVER_NAME}[\\s\\S]{0,600}`));
+    out[id] = m && OURS.test(m[0]) ? 'yes' : null;
   }
   return out;
 }
@@ -59,5 +61,5 @@ export async function doctor({ print = true } = {}) {
   add(true, 'Logs', LOG_DIR);
   add(true, 'Checkpoints', CHECKPOINT_DIR);
   if (print) for (const c of checks) console.log(`${c.ok ? '✓' : '✗'} ${c.label}${c.detail ? ` — ${c.detail}` : ''}`);
-  return checks.every((c) => c.ok);
+  return { ok: checks.every((c) => c.ok), checks };
 }

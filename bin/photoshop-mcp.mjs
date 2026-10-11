@@ -31,10 +31,10 @@ try {
     if (bad.length) throw new Error(`Unknown client(s): ${bad.join(', ')}. Choose from ${CLIENTS.join(', ')}.`);
     await setup({ exec: flag('exec'), clients, skill: !flag('no-skill'), bin: !flag('no-bin') });
     const { doctor } = await import('../src/doctor.mjs');
-    process.exitCode = (await doctor()) ? 0 : 1;
+    process.exitCode = (await doctor()).ok ? 0 : 1;
   } else if (cmd === 'doctor') {
     const { doctor } = await import('../src/doctor.mjs');
-    process.exitCode = (await doctor()) ? 0 : 1;
+    process.exitCode = (await doctor()).ok ? 0 : 1;
   } else if (cmd === 'uninstall') {
     const { uninstall } = await import('../src/setup.mjs');
     await uninstall();

@@ -116,6 +116,9 @@ function log(entry) {
   } catch {}
 }
 
+// Files a call produced, so the desktop app can show renders and exports in its gallery.
+const fileOf = (op, r) => (op === 'render' && r?.path ? { file: r.path, kind: 'render' } : op === 'document' && r?.saved ? { file: r.saved, kind: 'export' } : {});
+
 const summarize = (args) => {
   const s = JSON.stringify(args ?? {}, (k, v) => (k === 'code' && typeof v === 'string' ? `<${v.length} chars>` : v));
   return s.length > 2000 ? s.slice(0, 2000) + '…' : s;
@@ -135,10 +138,10 @@ function enqueue(fn) {
  * Run a named op from jsx/ops.jsx inside Photoshop.
  * @returns {{result:any, doc:number|null}} result plus the id of the document it acted on.
  */
-export function callOp(op, args, { docId = null, timeoutS = DEFAULT_TIMEOUT_S, tool = op } = {}) {
+export function callOp(op, args, { docId = null, timeoutS = DEFAULT_TIMEOUT_S, tool = op, quiet = false } = {}) {
   return enqueue(async () => {
     const started = Date.now();
-    const finish = (entry) => log({ ts: new Date(started).toISOString(), tool, op, docId, args: summarize(args), ms: Date.now() - started, ...entry });
+    const finish = (entry) => { if (!quiet) log({ ts: new Date(started).toISOString(), tool, op, docId, args: summarize(args), ms: Date.now() - started, ...entry }); };
     try {
       if (process.platform !== 'darwin') throw new PsError('photoshop-mcp currently supports macOS only.', 'unsupported_platform');
       if (!(await photoshopRunning())) throw new PsError('Photoshop is not running. Launch Photoshop and retry.', 'not_running');
@@ -164,7 +167,7 @@ export function callOp(op, args, { docId = null, timeoutS = DEFAULT_TIMEOUT_S, t
         throw new PsError(`Unexpected output from Photoshop: ${out.slice(0, 500)}`, 'bad_output');
       }
       if (!parsed.ok) throw new PsError(explain(parsed.error), parsed.code || 'photoshop_error');
-      finish({ ok: true, doc: parsed.doc });
+      finish({ ok: true, doc: parsed.doc, ...(fileOf(op, parsed.result)) });
       return { result: parsed.result, doc: parsed.doc ?? null };
     } catch (err) {
       finish({ ok: false, code: err.code, error: String(err.message).slice(0, 1000) });

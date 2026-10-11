@@ -1,14 +1,26 @@
 // Tool registry shared by the MCP server (server.mjs) and the CLI (cli.mjs).
 // Each tool: zod input shape → prepare() → a Photoshop op in jsx/ops.jsx.
-import { mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { mkdirSync, readdirSync, statSync, unlinkSync, existsSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
 import { callOp, PsError } from './bridge.mjs';
 
-export const RENDER_DIR = join(tmpdir(), 'photoshop-mcp');
-export const CHECKPOINT_DIR = process.env.PS_MCP_CHECKPOINT_DIR || join(homedir(), 'Library/Application Support/photoshop-mcp/checkpoints');
+export const APP_SUPPORT = join(homedir(), 'Library/Application Support/photoshop-mcp');
+export const RENDER_DIR = process.env.PS_MCP_RENDER_DIR || join(tmpdir(), 'photoshop-mcp');
+export const CHECKPOINT_DIR = process.env.PS_MCP_CHECKPOINT_DIR || join(APP_SUPPORT, 'checkpoints');
+// The desktop app pauses all edits by creating this file (the kill switch in its toolbar).
+export const PAUSE_FILE = join(APP_SUPPORT, 'paused');
 mkdirSync(RENDER_DIR, { recursive: true });
+
+function pruneDir(dir, pattern, keep, days) {
+  try {
+    const files = readdirSync(dir).filter((f) => pattern.test(f))
+      .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t);
+    const cutoff = Date.now() - days * 864e5;
+    files.forEach((x, i) => { if (i >= keep || x.t < cutoff) unlinkSync(join(dir, x.f)); });
+  } catch {}
+}
 
 // Photoshop versions the full e2e suite has passed on. Others work but are flagged.
 export const TESTED_VERSIONS = ['27.11'];
@@ -401,14 +413,8 @@ export function newSession({ checkpoint = process.env.PS_MCP_CHECKPOINT || 'full
   return { docId: null, checkpoint, checkpointed: new Set(checkpointed), editsSinceDisk: new Map(), exports: new Set(exports) };
 }
 
-function pruneCheckpoints() {
-  try {
-    const files = readdirSync(CHECKPOINT_DIR).filter((f) => /\.ps[db]$/.test(f))
-      .map((f) => ({ f, t: statSync(join(CHECKPOINT_DIR, f)).mtimeMs })).sort((a, b) => b.t - a.t);
-    const cutoff = Date.now() - 7 * 864e5;
-    files.forEach((x, i) => { if (i >= 20 || x.t < cutoff) unlinkSync(join(CHECKPOINT_DIR, x.f)); });
-  } catch {}
-}
+const pruneCheckpoints = () => pruneDir(CHECKPOINT_DIR, /\.ps[db]$/, 20, 7);
+const pruneRenders = () => pruneDir(RENDER_DIR, /^render-\d+\.(jpg|png)$/, 300, 14);
 
 async function ensureCheckpoint(session, tool, docId) {
   if (session.checkpoint === 'off') return null;
@@ -456,6 +462,8 @@ export async function runTool(tool, rawArgs, { parsed = false, session = null } 
   if (scoped === 'self') docId = ['open', 'create'].includes(args.action) ? null : (args.docId ?? session?.docId ?? null);
   else if (scoped) docId = args.docId ?? session?.docId ?? null;
 
+  if (mutates && existsSync(PAUSE_FILE)) throw new PsError('Edits are paused: the user pressed Pause in the Photoshop MCP app. Reads still work; ask the user to resume before editing.', 'paused');
+
   if (session && mutates) {
     const cp = await ensureCheckpoint(session, tool, docId);
     if (cp) {
@@ -476,6 +484,7 @@ export async function runTool(tool, rawArgs, { parsed = false, session = null } 
     } else if (scoped && session.docId === null && doc !== null) session.docId = doc;
     if (mutates && doc !== null) session.editsSinceDisk.set(doc, (session.editsSinceDisk.get(doc) || 0) + 1);
   }
+  if (tool.name === 'ps_render') pruneRenders();
   if (tool.name === 'ps_status') {
     result.compatibility = versionTested(result.version)
       ? { tested: true }
