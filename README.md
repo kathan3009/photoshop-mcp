@@ -15,7 +15,7 @@ Every edit is **one undo step** that **rolls back automatically** if it fails. T
 
 **[Download Photoshop MCP for Apple silicon](https://github.com/kathan3009/photoshop-mcp/releases/latest/download/Photoshop-MCP-1.2.0-arm64.dmg)** · [Intel Mac](https://github.com/kathan3009/photoshop-mcp/releases/latest/download/Photoshop-MCP-1.2.0-x64.dmg) · [all releases](https://github.com/kathan3009/photoshop-mcp/releases)
 
-Open the DMG, drag the app to Applications, launch it (it is unsigned: right-click → Open the first time) and press **Connect** next to your client. The app bundles the server, so there is nothing else to install — no Node, no plugin. It lives in the menu bar and shows every edit the agent makes: live activity, the renders it looked at, the files it exported, the checkpoints it took — with a **Pause** switch, **Undo last step** and **Revert to checkpoint**. Project page: [kathandesai.com/photoshop-mcp](https://kathandesai.com/photoshop-mcp) · [56-second launch video](https://github.com/kathan3009/photoshop-mcp/releases/download/v1.2.0/launch-video.mp4) · [build notes](https://kathandesai.com/blogs/photoshop-mcp-let-your-agent-work-in-photoshop).
+Open the DMG, drag the app to Applications, launch it (it is unsigned: right-click → Open the first time) and press **Connect** next to your client. The app bundles the server, so there is nothing else to install — no Node, no plugin. It lives in the menu bar and shows every edit the agent makes: live activity, the renders it looked at, the files it exported, the checkpoints it took — with a **Pause** switch, **Undo last step** and **Revert to checkpoint**. Project page: [kathandesai.com/photoshop-mcp](https://kathandesai.com/photoshop-mcp) · [24-second launch film with voiceover](https://github.com/kathan3009/photoshop-mcp/releases/download/v1.2.0/launch-video.mp4) · [build notes](https://kathandesai.com/blogs/photoshop-mcp-let-your-agent-work-in-photoshop).
 
 ### From source (3 minutes)
 
@@ -112,7 +112,8 @@ The raw probe scripts are in `probes/` (`node probes/run.mjs --scratch probes/p6
 
 ```
 app/                    Electron desktop app (bundles the server; `npm run dist` builds the DMGs)
-marketing/launch-video/ HyperFrames composition for the launch video (`npx hyperframes render`)
+marketing/brag-output/   the launch film (/brag workflow: plan, brief, HyperFrames composition with music + Kokoro voice, share copy)
+marketing/launch-video/ the earlier 56-second silent cut (HyperFrames composition)
 bin/photoshop-mcp.mjs   setup | doctor | uninstall | serve
 server.mjs              MCP server (stdio) + agent instructions + per-connection session
 cli.mjs                 psctl CLI

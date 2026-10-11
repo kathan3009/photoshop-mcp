@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Photoshop MCP — brag</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="assets/audio-data.js"></script>
+    <style>
+      :root { --bg: #0e1016; --bg2: #141825; --line: #262c40; --fg: #e8ebf4; --muted: #9aa3bd; --amber: #ffb547; --ok: #4cd37b; }
+      body { margin: 0; background: var(--bg); color: var(--fg); font-family: "IBM Plex Mono", monospace; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .display { font-family: "Archivo Black", sans-serif; font-weight: 400; letter-spacing: -0.035em; line-height: 0.98; }
+      .mono { font-family: "IBM Plex Mono", monospace; }
+
+      /* persistent atmosphere */
+      .glow { position: absolute; border-radius: 50%; filter: blur(100px); }
+      #glow-a { width: 1200px; height: 1200px; left: -420px; top: -460px; background: radial-gradient(circle, rgba(255,181,71,.34), rgba(255,181,71,0) 62%); }
+      #glow-b { width: 1300px; height: 1300px; right: -520px; bottom: -600px; background: radial-gradient(circle, rgba(110,168,255,.26), rgba(110,168,255,0) 62%); }
+      #grain { position: absolute; inset: -20px; opacity: .12; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch' seed='7'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+
+      /* 1 hook */
+      #s1-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+      #s1-shade { position: absolute; inset: 0; background: radial-gradient(ellipse at 32% 48%, rgba(14,16,22,.3), rgba(14,16,22,.93) 74%); }
+      #s1-text { position: absolute; left: 150px; top: 360px; width: 1500px; }
+      #s1-text .line { display: block; font-size: 124px; }
+      #s1-text .line b { color: var(--amber); font-weight: 400; }
+      #s1-rule { position: absolute; left: 156px; top: 630px; width: 420px; height: 3px; background: var(--amber); transform-origin: left center; }
+
+      /* 2 reveal */
+      #s2-win { position: absolute; left: 1040px; top: 130px; width: 1200px; border-radius: 22px; overflow: hidden; border: 2px solid #2c3450; box-shadow: 0 60px 140px rgba(0,0,0,.6); }
+      #s2-win img { display: block; width: 100%; height: auto; }
+      #s2-veil { position: absolute; inset: 0; opacity: 0; background: linear-gradient(90deg, rgba(14,16,22,.2) 30%, rgba(14,16,22,.85) 58%, rgba(14,16,22,.2) 100%); }
+      #s2-icon { position: absolute; left: 150px; top: 240px; width: 180px; height: 180px; border-radius: 42px; box-shadow: 0 40px 90px rgba(0,0,0,.55); }
+      #s2-name { position: absolute; left: 150px; top: 460px; font-size: 128px; width: 1100px; }
+      #s2-sub { position: absolute; left: 154px; top: 760px; font-size: 26px; color: var(--muted); letter-spacing: .08em; }
+      #s2-sub b { color: var(--fg); font-weight: 400; }
+
+      /* 3 flow */
+      #ba { position: absolute; left: 120px; top: 150px; width: 1180px; height: 700px; border-radius: 22px; overflow: hidden; border: 2px solid #2c3450; box-shadow: 0 60px 140px rgba(0,0,0,.6); }
+      #ba img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+      #ba-div { position: absolute; top: 0; bottom: 0; left: 0; width: 4px; background: var(--amber); box-shadow: 0 0 24px rgba(255,181,71,.85); }
+      .lab { position: absolute; bottom: 24px; font-size: 22px; padding: 9px 14px; background: rgba(14,16,22,.78); border: 1px solid var(--line); border-radius: 10px; letter-spacing: .12em; text-transform: uppercase; }
+      .lab.l { left: 24px; } .lab.r { right: 24px; color: var(--amber); border-color: var(--amber); }
+      #feed { position: absolute; left: 1380px; top: 230px; width: 440px; display: grid; gap: 22px; font-size: 27px; }
+      .ev { display: flex; gap: 16px; align-items: baseline; }
+      .ev .t { color: var(--muted); font-size: 20px; width: 84px; }
+      .ev .n::after { content: " ✓"; color: var(--ok); }
+      #s3-foot { position: absolute; left: 124px; top: 900px; font-size: 26px; color: var(--muted); letter-spacing: .02em; }
+      #s3-foot b { color: var(--fg); font-weight: 400; }
+
+      /* 4 safety */
+      #s4-head { position: absolute; left: 150px; top: 150px; font-size: 104px; width: 1180px; }
+      #s4-list { position: absolute; left: 150px; top: 440px; display: grid; gap: 36px; width: 1000px; }
+      .guard { display: grid; grid-template-columns: 66px 1fr; gap: 22px; align-items: start; }
+      .guard .mk { width: 50px; height: 50px; border-radius: 13px; background: var(--amber); display: grid; place-items: center; color: #1a1200; font-size: 26px; font-weight: 700; }
+      .guard .tt { font-size: 40px; font-family: "Archivo Black", sans-serif; letter-spacing: -0.02em; }
+      .guard .dd { font-size: 24px; color: var(--muted); margin-top: 8px; }
+      #pause-card { position: absolute; left: 1360px; top: 430px; width: 410px; padding: 34px; border-radius: 26px; background: var(--bg2); border: 2px solid var(--line); box-shadow: 0 50px 120px rgba(0,0,0,.6); }
+      #pause-card .lbl { font-size: 19px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+      #pause-btn { margin-top: 18px; font-size: 32px; padding: 20px 26px; border-radius: 14px; border: 2px solid #7a3030; color: #ffb3b3; text-align: center; background: #1b1620; }
+      #pause-btn.on { background: #ff6b6b; color: #1a0000; border-color: transparent; }
+
+      /* 5 outro */
+      #s5-icon { position: absolute; left: 830px; top: 200px; width: 260px; height: 260px; border-radius: 60px; box-shadow: 0 40px 100px rgba(0,0,0,.6); }
+      #s5-title { position: absolute; left: 0; right: 0; top: 520px; text-align: center; font-size: 104px; }
+      #s5-url { position: absolute; left: 0; right: 0; top: 670px; text-align: center; font-size: 36px; color: var(--amber); letter-spacing: .04em; }
+      #s5-foot { position: absolute; left: 0; right: 0; top: 760px; text-align: center; font-size: 22px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="24.6">
+
+      <section id="bg" class="clip" data-start="0" data-duration="24.6" data-track-index="0">
+        <div id="glow-a" class="glow"></div>
+        <div id="glow-b" class="glow"></div>
+        <div id="grain"></div>
+      </section>
+
+      <!-- 1 · hook 0–3.6 -->
+      <section id="s1" class="clip" data-start="0" data-duration="3.6" data-track-index="1">
+        <img id="s1-photo" src="assets/img/bridge-after.jpg" alt="" data-layout-allow-overflow />
+        <div id="s1-shade"></div>
+        <div id="s1-text" class="display">
+          <span class="line" id="s1-l1">Your agent can see.</span>
+          <span class="line" id="s1-l2">Now it can <b>edit.</b></span>
+        </div>
+        <div id="s1-rule"></div>
+      </section>
+
+      <!-- 2 · reveal 3.6–9.5 -->
+      <section id="s2" class="clip" data-start="3.6" data-duration="5.9" data-track-index="1">
+        <div id="s2-win" data-layout-allow-overflow><img src="assets/img/overview.png" alt="" /></div>
+        <div id="s2-veil"></div>
+        <img id="s2-icon" src="assets/img/icon.png" alt="" />
+        <div id="s2-name" class="display">Photoshop<br />MCP</div>
+        <div id="s2-sub" class="mono"><b>Claude Code</b> · <b>Claude Desktop</b> · <b>Cursor</b> · <b>Codex</b></div>
+      </section>
+
+      <!-- 3 · the flow 9.5–15.0 -->
+      <section id="s3" class="clip" data-start="9.5" data-duration="5.5" data-track-index="1">
+        <div id="ba">
+          <img src="assets/img/bridge-before.jpg" alt="" />
+          <img id="ba-after" src="assets/img/bridge-after-flow.jpg" alt="" />
+          <div id="ba-div"></div>
+          <span class="lab l mono">Raw</span><span class="lab r mono">Graded by the agent</span>
+        </div>
+        <div id="feed" class="mono">
+          <div class="ev" id="e1"><span class="t">00:01</span><span class="n">ps_render</span></div>
+          <div class="ev" id="e2"><span class="t">00:02</span><span class="n">ps_selection subject</span></div>
+          <div class="ev" id="e3"><span class="t">00:03</span><span class="n">ps_adjustment curves</span></div>
+          <div class="ev" id="e4"><span class="t">00:04</span><span class="n">ps_mask add</span></div>
+          <div class="ev" id="e5"><span class="t">00:06</span><span class="n">ps_document save</span></div>
+        </div>
+        <div id="s3-foot" class="mono"><b>Adjustment layers · AI Select Subject · masks · sRGB export.</b></div>
+      </section>
+
+      <!-- 4 · safety 15.0–21.2 -->
+      <section id="s4" class="clip" data-start="15" data-duration="6.2" data-track-index="1">
+        <div id="s4-head" class="display">Built so you can leave it running.</div>
+        <div id="s4-list">
+          <div class="guard" id="g1"><div class="mk">1</div><div><div class="tt">Checkpoint before the first edit</div><div class="dd mono">A history snapshot and a copy of unsaved work on disk.</div></div></div>
+          <div class="guard" id="g2"><div class="mk">2</div><div><div class="tt">Your files stay yours</div><div class="dd mono">Overwriting or discarding needs your explicit OK.</div></div></div>
+          <div class="guard" id="g3"><div class="mk">3</div><div><div class="tt">One undo per step</div><div class="dd mono">Undo the agent's last step, or revert to the checkpoint.</div></div></div>
+        </div>
+        <div id="pause-card">
+          <div class="lbl mono">Kill switch</div>
+          <div id="pause-btn" class="mono">Pause edits</div>
+        </div>
+      </section>
+
+      <!-- 5 · outro 21.2–24.6 -->
+      <section id="s5" class="clip" data-start="21.2" data-duration="3.4" data-track-index="1">
+        <img id="s5-icon" src="assets/img/icon-outro.png" alt="" />
+        <div id="s5-title" class="display">Download for Mac</div>
+        <div id="s5-url" class="mono">kathandesai.com/photoshop-mcp</div>
+        <div id="s5-foot" class="mono">Free · MIT · Apple silicon &amp; Intel</div>
+      </section>
+
+      <!-- audio: music bed, voice, sfx -->
+      <audio id="bgm-music" data-timeline-role="music" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3" data-start="0" data-duration="24.6" data-track-index="10" data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.8,"v":0.17},{"t":23.9,"v":0.17},{"t":24.15,"v":0.24},{"t":24.6,"v":0}]}]}'></audio>
+      <audio id="vo-1" src="assets/vo/vo-1.wav" data-duration="2.61" data-start="0.4" data-track-index="3" data-volume="1"></audio>
+      <audio id="vo-2" src="assets/vo/vo-2.wav" data-duration="5.7" data-start="3.8" data-track-index="3" data-volume="1"></audio>
+      <audio id="vo-3" src="assets/vo/vo-3.wav" data-duration="4.63" data-start="9.7" data-track-index="3" data-volume="1"></audio>
+      <audio id="vo-4" src="assets/vo/vo-4.wav" data-duration="5.51" data-start="15.2" data-track-index="3" data-volume="1"></audio>
+      <audio id="vo-5" src="assets/vo/vo-5.wav" data-duration="2.93" data-start="21.4" data-track-index="3" data-volume="1"></audio>
+      <audio id="sfx-icon" src="assets/sfx/impact/impactSoft_medium_001.ogg" data-start="4.32" data-duration="0.6" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="sfx-wipe" src="assets/sfx/impact/impactSoft_medium_004.ogg" data-start="9.78" data-duration="0.6" data-track-index="12" data-volume="0.55"></audio>
+      <audio id="sfx-click" src="assets/sfx/interface/click_003.ogg" data-start="18.52" data-duration="0.3" data-track-index="13" data-volume="0.7"></audio>
+      <audio id="sfx-bell" src="assets/sfx/impact/impactBell_heavy_000.ogg" data-start="22.88" data-duration="1.7" data-track-index="14" data-volume="0.6"></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const T = { s1: 0, s2: 3.6, s3: 9.5, s4: 15, s5: 21.2 };
+      // Cue map (vol-12 preset, 110 BPM): icon lands on beat 4.39; wipe starts on strong cue 9.83;
+      // feed on beats 10.37 / 10.93 / 11.46 / 12.02 and strong cue 13.11; guards on 15.84 / 16.93 / 18.02
+      // (every other beat so each line reads); pause flips on strong cue 18.56; lockup on strong cue 22.93.
+
+      // ---- atmosphere: slow drift + subtle audio-reactive breath (RMS → glow opacity, nothing on text)
+      tl.fromTo('#glow-a', { scale: 0.92 }, { scale: 1.1, duration: 12, ease: 'sine.inOut', repeat: 2, yoyo: true }, 0);
+      tl.fromTo('#glow-b', { scale: 1.08, x: 0 }, { scale: 0.94, x: -50, duration: 10, ease: 'sine.inOut', repeat: 2, yoyo: true }, 0);
+      const glowA = document.getElementById('glow-a'), glowB = document.getElementById('glow-b');
+      for (let f = 0; f < AUDIO_DATA.totalFrames; f++) {
+        tl.call(((frame) => () => {
+          const e = frame.rms, bass = frame.bands[0];
+          glowA.style.opacity = (0.72 + 0.28 * e).toFixed(3);
+          glowB.style.opacity = (0.7 + 0.3 * bass).toFixed(3);
+        })(AUDIO_DATA.frames[f]), [], f / AUDIO_DATA.fps);
+      }
+
+      // ---- 1 · hook: fade up from black, slow push, two lines
+      tl.fromTo('#s1-photo', { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1.0, duration: 3.4, ease: 'power1.out' }, T.s1);
+      tl.fromTo('#s1-l1', { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power4.out' }, T.s1 + 0.45);
+      tl.fromTo('#s1-l2', { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'expo.out' }, T.s1 + 1.55);
+      tl.fromTo('#s1-rule', { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: 'power3.inOut' }, T.s1 + 2.0);
+      tl.to(['#s1-text', '#s1-rule', '#s1-photo'], { opacity: 0, duration: 0.5, ease: 'power2.in' }, T.s1 + 3.1);
+
+      // ---- 2 · reveal: window as texture, icon lands on beat 4.39, name rises, clients fade in
+      tl.fromTo('#s2-win', { x: 220, rotationY: -16, opacity: 0, transformPerspective: 1600 }, { x: 0, rotationY: -8, opacity: 0.9, duration: 1.2, ease: 'expo.out' }, T.s2 + 0.1);
+      tl.to('#s2-win', { y: -12, duration: 4.4, ease: 'sine.inOut' }, T.s2 + 1.3);
+      tl.fromTo('#s2-veil', { opacity: 0 }, { opacity: 1, duration: 0.8 }, T.s2 + 0.2);
+      tl.fromTo('#s2-icon', { y: -70, scale: 0.8, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.5)' }, 4.39 - 0.5);   // beat-locked: 4.39s (landing)
+      tl.fromTo('#s2-name', { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power4.out' }, 4.5);
+      tl.fromTo('#s2-sub', { opacity: 0 }, { opacity: 1, duration: 0.6 }, 5.6);
+      tl.to(['#s2-icon', '#s2-name', '#s2-sub'], { opacity: 0, y: -24, duration: 0.45, ease: 'power2.in', stagger: 0.03 }, T.s3 - 0.5);
+      tl.to(['#s2-win', '#s2-veil'], { opacity: 0, duration: 0.45, ease: 'power2.in' }, T.s3 - 0.45);
+
+      // ---- 3 · the flow: wipe starts on strong cue 9.83; feed ticks on the beat grid
+      tl.fromTo('#ba', { scale: 0.97, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: 'power3.out' }, T.s3 + 0.05);
+      tl.fromTo('#ba-after', { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: 2.9, ease: 'power2.inOut' }, 9.83);   // beat-locked: 9.83s
+      tl.fromTo('#ba-div', { x: 0 }, { x: 1176, duration: 2.9, ease: 'power2.inOut' }, 9.83);
+      tl.to('#ba-div', { opacity: 0, duration: 0.3 }, 12.75);
+      // beat-grid: feed at 10.37, 10.93, 11.46, 12.02; last on strong cue 13.11
+      [[10.37, '#e1'], [10.93, '#e2'], [11.46, '#e3'], [12.02, '#e4'], [13.11, '#e5']].forEach(([t, id]) =>
+        tl.fromTo(id, { x: 28, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, t - 0.05));
+      tl.fromTo('#s3-foot', { opacity: 0 }, { opacity: 1, duration: 0.6 }, 12.3);
+      tl.to(['#ba', '#feed', '#s3-foot'], { opacity: 0, duration: 0.45, ease: 'power2.in' }, T.s4 - 0.45);
+
+      // ---- 4 · safety: guards on every other beat; pause flips on strong cue 18.56
+      tl.fromTo('#s4-head', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power4.out' }, T.s4 + 0.1);
+      // beat-grid: guards at 15.84, 16.93, 18.02
+      [[15.84, '#g1'], [16.93, '#g2'], [18.02, '#g3']].forEach(([t, id]) => {
+        tl.fromTo(id, { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, t - 0.05);
+        tl.fromTo(id + ' .mk', { scale: 0.5, rotation: -16 }, { scale: 1, rotation: 0, duration: 0.45, ease: 'back.out(2.4)' }, t);
+      });
+      tl.fromTo('#pause-card', { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'expo.out' }, 16.2);
+      const pauseBtn = document.getElementById('pause-btn');
+      tl.to('#pause-btn', { scale: 0.94, duration: 0.09, ease: 'power2.in' }, 18.46);
+      tl.to('#pause-btn', { scale: 1, duration: 0.3, ease: 'back.out(3)', onStart: () => { pauseBtn.classList.add('on'); pauseBtn.textContent = 'Edits paused'; }, onReverseComplete: () => { pauseBtn.classList.remove('on'); pauseBtn.textContent = 'Pause edits'; } }, 18.56);   // beat-locked: 18.56s
+      tl.to(['#s4-head', '#s4-list', '#pause-card'], { opacity: 0, y: -20, duration: 0.45, ease: 'power2.in', stagger: 0.03 }, T.s5 - 0.45);
+
+      // ---- 5 · outro: lockup lands on strong cue 22.93 with the bell, then everything fades
+      tl.fromTo('#s5-icon', { y: -90, scale: 0.8, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.7, ease: 'back.out(1.4)' }, 22.93 - 0.6);   // beat-locked: 22.93s (landing)
+      tl.fromTo('#s5-title', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, 22.5);
+      tl.fromTo('#s5-url', { opacity: 0 }, { opacity: 1, duration: 0.5 }, 22.95);
+      tl.fromTo('#s5-foot', { opacity: 0 }, { opacity: 1, duration: 0.5 }, 23.2);
+      tl.to(['#s5-icon', '#s5-title', '#s5-url', '#s5-foot', '#bg'], { opacity: 0, duration: 0.6, ease: 'power2.in' }, 24.0);
+
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>
