@@ -1,7 +1,7 @@
 {
   "name": "photoshop-mcp",
-  "version": "1.2.0",
-  "description": "Drive the Adobe Photoshop running on your Mac from Claude, Cursor, Codex and other MCP clients — MCP server, CLI and agent skill on one tested core",
+  "version": "1.2.1",
+  "description": "Drive the Adobe Photoshop running on your Mac from Claude, Cursor, Codex and other MCP clients \u2014 MCP server, CLI and agent skill on one tested core",
   "type": "module",
   "main": "server.mjs",
   "bin": {
@@ -13,9 +13,19 @@
     "setup": "node bin/photoshop-mcp.mjs setup",
     "doctor": "node bin/photoshop-mcp.mjs doctor",
     "test": "node test/e2e.mjs",
-    "trial": "node test/agent-trial.mjs"
+    "trial": "node test/agent-trial.mjs",
+    "test:release": "node --test test/release.test.mjs",
+    "test:smoke": "node test/source-smoke.mjs"
   },
-  "keywords": ["photoshop", "mcp", "model-context-protocol", "claude", "agent", "automation", "macos"],
+  "keywords": [
+    "photoshop",
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "agent",
+    "automation",
+    "macos"
+  ],
   "author": "Kathan",
   "license": "MIT",
   "repository": {
@@ -29,7 +39,9 @@
   "engines": {
     "node": ">=18"
   },
-  "os": ["darwin"],
+  "os": [
+    "darwin"
+  ],
   "files": [
     "bin/",
     "server.mjs",

@@ -56,7 +56,13 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); return true; };
 const near = (a, b, tol = 2) => Math.abs(a - b) <= tol;
 
 // ---------------------------------------------------------------- baseline
-const before = (await call('ps_status')).json;
+const baseline = await call('ps_status');
+if (!baseline.ok || !baseline.json || !Array.isArray(baseline.json.documents)) {
+  console.error(`Cannot start Photoshop tests: ${baseline.text || 'ps_status returned no document state'}. Open Photoshop and check Automation permission, then retry.`);
+  await client.close();
+  process.exit(2);
+}
+const before = baseline.json;
 // A malformed Action Manager call can crash Photoshop and take every open document with it. Never test next to unsaved work.
 const dirty = (before.documents || []).filter((d) => d.unsavedChanges && !/^e2e/.test(d.name));
 if (dirty.length && process.env.PS_E2E_FORCE !== '1') {
@@ -210,6 +216,10 @@ try {
     await step(`smart filter ${type}`, 'ps_filter', { layer: 'Filter target', type, params });
   }
   await step('inspect lists smart filters', 'ps_inspect', { layers: ['Filter target'] }, (j) => assert(j[0].smartFilters.length === 6, JSON.stringify(j[0].smartFilters)));
+  // The opaque gray filter fixture covers the photo. Select Subject must see the
+  // subject, not a flat test layer left over from the preceding filter checks.
+  await step('hide filter fixture before selecting the photo subject', 'ps_set_layers', { updates: [{ layer: 'Filter target', visible: false }] },
+    (j) => assert(j.changed[0].visible === false, 'filter fixture hidden'));
 
   // ---------------------------------------------------------------- selections & masks
   await step('select rect', 'ps_selection', { action: 'rect', bounds: [100, 100, 400, 300] }, (j) => assert(j.selection.join() === '100,100,400,300', JSON.stringify(j)));
@@ -228,7 +238,11 @@ try {
   await step('select subject on the visible image (AI)', 'ps_selection', { action: 'subject' }, (j) => assert(Array.isArray(j.selection), 'has selection'));
   await step('subject with mode: subtract honors the previous selection', 'ps_selection', { action: 'rect', bounds: [0, 0, 1200, 800] });
   await step('…subtract', 'ps_selection', { action: 'subject', mode: 'subtract' }, (j) => assert(Array.isArray(j.selection) && j.selection[0] === 0 && j.selection[2] === 1200, `${j.selection}`));
-  await step('…intersect leaves only the subject', 'ps_selection', { action: 'subject', mode: 'intersect' }, (j) => assert(Array.isArray(j.selection) && j.selection[0] > 0, `${j.selection}`));
+  // Do not intersect the subject with the complement produced by subtraction.
+  // Start with a known region and verify that intersection stays inside it.
+  await step('reset region before subject intersection', 'ps_selection', { action: 'rect', bounds: [600, 320, 1100, 720] });
+  await step('…intersect confines the subject to the selected region', 'ps_selection', { action: 'subject', mode: 'intersect' },
+    (j) => assert(Array.isArray(j.selection) && j.selection[0] >= 600 && j.selection[1] >= 320 && j.selection[2] <= 1100 && j.selection[3] <= 720, `${j.selection}`));
   await step('limit selection to the photo layer', 'ps_selection', { action: 'layer', layer: photo.id, mode: 'intersect' }, (j) => assert(Array.isArray(j.selection) && j.selection[0] > 400 && j.selection[2] < 1210 && j.selection[1] >= 319, `${j.selection}`));
   await expectError('fill on a hidden layer is explained', 'ps_selection', { action: 'fill', layer: 'Green fill', color: '#ff00ff' }, /hidden/);
   await step('show layer', 'ps_set_layers', { updates: [{ layer: 'Green fill', visible: true }] });

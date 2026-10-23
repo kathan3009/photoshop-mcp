@@ -8,7 +8,9 @@ const ROOT = dirname(APP);
 const OUT = join(APP, 'server');
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
-for (const f of ['server.mjs', 'cli.mjs', 'package.json', 'LICENSE', 'src', 'jsx', 'skill', 'node_modules']) {
-  cpSync(join(ROOT, f), join(OUT, f), { recursive: true, filter: (p) => !/\.DS_Store$|\.map$|\/test\/|\/tests\/|README|CHANGELOG/.test(p) });
+for (const f of ['server.mjs', 'cli.mjs', 'bin', 'package.json', 'LICENSE', 'src', 'jsx', 'skill', 'node_modules']) {
+  // Materialize npm's .bin links; fs.cp otherwise turns relative links into absolute
+  // links back to the checkout, which fail strict bundle signature verification.
+  cpSync(join(ROOT, f), join(OUT, f), { recursive: true, dereference: true, filter: (p) => !/\.DS_Store$|\.map$|\/test\/|\/tests\/|README|CHANGELOG/.test(p) });
 }
 console.log('server copied to', OUT);

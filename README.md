@@ -7,29 +7,33 @@ Claude Code / Claude Desktop / Cursor / Codex ──MCP──▶ photoshop-mcp �
 shell / scripts ──────────────────────────────psctl──▶ (same core)
 ```
 
-Every edit is **one undo step** that **rolls back automatically** if it fails. The agent gets a safety checkpoint before its first edit, can never overwrite your files without `overwrite: true`, and sees the picture (sRGB renders + histogram numbers) before and after each change.
+Every edit is **one undo step** that **rolls back automatically** if it fails. The agent gets a safety checkpoint before its first edit, requires `overwrite: true` to replace an existing file, and sees the picture (sRGB renders + histogram numbers) before and after each change.
 
 ## Install
 
-### The app (recommended for most people)
+### Recommended: run from source
 
-**[Download Photoshop MCP for Apple silicon](https://github.com/kathan3009/photoshop-mcp/releases/latest/download/Photoshop-MCP-1.2.0-arm64.dmg)** · [Intel Mac](https://github.com/kathan3009/photoshop-mcp/releases/latest/download/Photoshop-MCP-1.2.0-x64.dmg) · [all releases](https://github.com/kathan3009/photoshop-mcp/releases)
-
-Open the DMG, drag the app to Applications, launch it (it is unsigned: right-click → Open the first time) and press **Connect** next to your client. The app bundles the server, so there is nothing else to install — no Node, no plugin. It lives in the menu bar and shows every edit the agent makes: live activity, the renders it looked at, the files it exported, the checkpoints it took — with a **Pause** switch, **Undo last step** and **Revert to checkpoint**. Project page: [kathandesai.com/photoshop-mcp](https://kathandesai.com/photoshop-mcp) · [24-second launch film with voiceover](https://github.com/kathan3009/photoshop-mcp/releases/download/v1.2.0/launch-video.mp4) · [build notes](https://kathandesai.com/blogs/photoshop-mcp-let-your-agent-work-in-photoshop).
-
-### From source (3 minutes)
-
-You need macOS, [Node 18+](https://nodejs.org) and Photoshop 2026 (tested on 27.11; other versions are flagged, not blocked).
+**macOS only.** You need an installed/licensed copy of Photoshop, Git, Node.js 18+ with npm (prefer a supported Node LTS), and an MCP client. Tested with **Photoshop 27.11.0**; other versions are unverified. The server is free and MIT-licensed; Photoshop and your model provider may charge separately.
 
 ```bash
 git clone https://github.com/kathan3009/photoshop-mcp.git
 cd photoshop-mcp
-scripts/install.sh            # npm install + photoshop-mcp setup
+./scripts/install.sh --client claude-code
 ```
 
-`setup` registers the server with every MCP client it finds (Claude Code, Claude Desktop, Cursor, Codex CLI), links the agent skill into `~/.claude/skills/photoshop`, puts `psctl` and `photoshop-mcp` in `~/.local/bin`, then runs `doctor`. Restart Claude Desktop / Cursor afterwards. Then open Photoshop and ask your agent to run `ps_status`; macOS asks once whether the client may control Photoshop — allow it.
+Use `claude-desktop`, `cursor`, or `codex` instead of `claude-code` for your client. Omit `--client` to configure all detected clients. The installer installs locked dependencies, backs up existing client config files, adds the Photoshop MCP entry, and links the Claude skill and CLI tools. No sudo or desktop app is needed. Keep this clone in place: clients use its absolute path.
 
-Options: `scripts/install.sh --exec` also enables the `ps_exec` ExtendScript escape hatch. `photoshop-mcp setup --client cursor` registers one client only. `photoshop-mcp uninstall` reverses everything. Prefer npm? `npm install -g github:kathan3009/photoshop-mcp && photoshop-mcp setup`.
+Restart your client, open Photoshop, and ask it to **run `ps_status`**. Allow the macOS Automation request to control Photoshop. For diagnostics, run `node bin/photoshop-mcp.mjs doctor`. If `psctl` is not found, use `node cli.mjs` or add `~/.local/bin` to PATH.
+
+Try a disposable photo first: ask the agent to render it, add a named exposure adjustment layer, render again, then undo that step. The source server exposes the editing, history and checkpoint tools; the optional desktop app adds the menu-bar UI.
+
+[Installation, troubleshooting, privacy, and uninstall](docs/INSTALLATION.md) · [Report an issue](https://github.com/kathan3009/photoshop-mcp/issues)
+
+### Optional desktop app
+
+The existing **1.2.0 DMGs are unnotarized** and can trigger macOS's “damaged” warning. Use the source installation above for now. The repo now separates notarized public builds from explicitly named `-unnotarized` local test builds; a new notarized download is not yet being advertised. See [release procedure](docs/RELEASING.md).
+
+The app bundles its own runtime, shows activity/previews/checkpoints, and provides Pause, Undo and Revert controls. If using it, copy it to Applications and launch it there **before** connecting clients.
 
 Any other MCP client: `photoshop-mcp setup` prints the JSON snippet, which is just
 
@@ -81,9 +85,15 @@ psctl doctor
 
 Args are `key=value` (values parsed as JSON), one JSON object, `@file.json`, or `-` for stdin. The CLI is stateless: pass `docId` when more than one document is open.
 
+## Data handling
+
+Execution is local, but requested previews and tool results are returned to your MCP client and may be sent to its model provider. Local execution is not a promise that images never leave your Mac. Logs and checkpoints can contain sensitive data. Overwrite/discard flags are programmatic guards, not independent human approval dialogs. See [details](docs/INSTALLATION.md#privacy-costs-and-permissions).
+
 ## Testing
 
 ```bash
+npm run test:smoke   # MCP startup and tool discovery, without Photoshop
+npm run test:release # release policy and isolated client-configuration regression checks
 npm test          # end-to-end over real MCP against the running Photoshop
 ```
 

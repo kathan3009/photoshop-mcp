@@ -52,7 +52,11 @@ function jsonClient(id, exec, remove) {
   let cfg = {};
   if (existsSync(c.file)) {
     try { cfg = JSON.parse(readFileSync(c.file, 'utf8') || '{}'); }
-    catch { return `${c.label}: ${c.file} is not valid JSON — left alone. Add this manually: ${JSON.stringify({ mcpServers: { [SERVER_NAME]: serverEntry(exec) } })}`; }
+    catch { throw new Error(`${c.label}: ${c.file} is not valid JSON — left unchanged. Repair it or restore the backup before reconnecting.`); }
+  }
+  const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (!object(cfg) || (cfg.mcpServers !== undefined && !object(cfg.mcpServers))) {
+    throw new Error(`${c.label}: expected a JSON object with an mcpServers object in ${c.file}; left unchanged.`);
   }
   cfg.mcpServers = cfg.mcpServers || {};
   if (remove) {
@@ -108,11 +112,13 @@ export const CLIENTS = ['claude-code', 'claude-desktop', 'cursor', 'codex'];
 
 // Register one client; returns its status line (null = not installed).
 export function connect(id, exec) {
+  if (!CLIENTS.includes(id)) throw new Error(`Unknown client: ${id}`);
   if (id === 'claude-code') return claudeCode(exec, false);
   if (id === 'codex') return codex(exec, false);
   return jsonClient(id, exec, false);
 }
 export function disconnect(id) {
+  if (!CLIENTS.includes(id)) throw new Error(`Unknown client: ${id}`);
   if (id === 'claude-code') return claudeCode(false, true);
   if (id === 'codex') return codex(false, true);
   return jsonClient(id, false, true);

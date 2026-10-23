@@ -21,6 +21,7 @@ api.onTab((t) => showTab(t));
 
 // ---------------------------------------------------------------- overview / status
 async function refreshState() {
+  try {
   state = await api.state();
   $('#version').textContent = `v${state.version}${state.packaged ? '' : ' (dev)'}`;
   const ps = state.photoshop, dot = $('#ps-dot');
@@ -38,7 +39,9 @@ async function refreshState() {
   $('#exec').checked = !!state.settings.exec;
   $('#login').checked = !!state.settings.openAtLogin;
   $('#server-path').textContent = `Server: ${state.serverPath}`;
+  $('#install-warning').hidden = state.installed;
   renderClients();
+  } catch (e) { toast(`Could not refresh status: ${e.message}`, true); }
 }
 
 function renderClients() {
@@ -51,10 +54,15 @@ function renderClients() {
       <div class="row"><button class="btn ${reg ? '' : 'primary'}" data-act="connect">${reg ? 'Reconnect' : 'Connect'}</button>${reg ? '<button class="btn" data-act="disconnect">Disconnect</button>' : ''}</div>`;
     card.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
       b.disabled = true; b.textContent = '…';
-      const msg = await (b.dataset.act === 'connect' ? api.connect(id) : api.disconnect(id));
-      await refreshState();
-      const c = [...box.children].find((x) => x.querySelector('.name').textContent.startsWith(label));
-      if (c) c.querySelector('.state').textContent = msg;
+      try {
+        const msg = await (b.dataset.act === 'connect' ? api.connect(id) : api.disconnect(id));
+        await refreshState();
+        const c = [...box.children].find((x) => x.querySelector('.name').textContent.startsWith(label));
+        if (c) c.querySelector('.state').textContent = msg;
+      } catch (e) {
+        toast(e.message, true);
+        renderClients();
+      }
     }));
     box.appendChild(card);
   }
@@ -64,7 +72,7 @@ const hint = (id) => ({ 'claude-code': 'Registers with the claude CLI (user scop
 $('#btn-pause').addEventListener('click', async () => { await api.pause(!state.paused); refreshState(); });
 $('#btn-undo').addEventListener('click', async () => { try { const r = await api.history('undo'); toast(`Undid: ${r.from}`); } catch (e) { toast(e.message, true); } refreshState(); });
 $('#btn-revert').addEventListener('click', async () => { try { const r = await api.history('revert'); toast(`Reverted to ${r.revertedTo}`); } catch (e) { toast(e.message, true); } refreshState(); });
-$('#btn-json').addEventListener('click', async () => { await api.copyJson(); toast('Copied the mcpServers JSON to the clipboard'); });
+$('#btn-json').addEventListener('click', async () => { try { await api.copyJson(); toast('Copied the mcpServers JSON to the clipboard'); } catch (e) { toast(e.message, true); } });
 $('#btn-open-ps').addEventListener('click', () => api.openPhotoshop());
 $('#exec').addEventListener('change', async (e) => { await api.settings({ exec: e.target.checked }); toast('Reconnect a client to apply'); });
 $('#login').addEventListener('change', (e) => api.settings({ openAtLogin: e.target.checked }));
@@ -98,7 +106,9 @@ async function loadGallery() {
     if (!files.length) { box.innerHTML = `<div class="empty">${empty}</div>`; return; }
     for (const f of files) {
       const t = document.createElement('div'); t.className = 'thumb';
-      t.innerHTML = `<img src="file://${encodeURI(f.path)}" loading="lazy"><div class="cap"><b title="${esc(f.path)}">${esc(f.name)}</b><span>${when(f.mtime)}</span></div>`;
+      t.innerHTML = `<img loading="lazy"><div class="cap"><b title="${esc(f.path)}">${esc(f.name)}</b><span>${when(f.mtime)}</span></div>`;
+      // Encode path components so quotes, # and ? in filenames remain filenames.
+      t.querySelector('img').src = 'file://' + f.path.split('/').map(encodeURIComponent).join('/');
       t.addEventListener('click', () => api.open(f.path));
       t.addEventListener('contextmenu', () => api.reveal(f.path));
       box.appendChild(t);

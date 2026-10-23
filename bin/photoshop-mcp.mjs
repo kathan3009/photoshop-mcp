@@ -8,7 +8,12 @@ import { PKG } from '../src/paths.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
 const flag = (name) => rest.includes(`--${name}`);
-const opt = (name) => { const i = rest.indexOf(`--${name}`); return i >= 0 ? rest[i + 1] : undefined; };
+const opt = (name) => {
+  const i = rest.indexOf(`--${name}`);
+  if (i < 0) return undefined;
+  if (!rest[i + 1] || rest[i + 1].startsWith('--')) throw new Error(`--${name} needs a value.`);
+  return rest[i + 1];
+};
 
 const HELP = `photoshop-mcp ${PKG.version} — drive the Photoshop running on this Mac from Claude and other MCP clients.
 
@@ -30,8 +35,7 @@ try {
     const bad = clients.filter((c) => !CLIENTS.includes(c));
     if (bad.length) throw new Error(`Unknown client(s): ${bad.join(', ')}. Choose from ${CLIENTS.join(', ')}.`);
     await setup({ exec: flag('exec'), clients, skill: !flag('no-skill'), bin: !flag('no-bin') });
-    const { doctor } = await import('../src/doctor.mjs');
-    process.exitCode = (await doctor()).ok ? 0 : 1;
+    console.log('Setup complete. Restart your MCP client, open Photoshop, then run: photoshop-mcp doctor');
   } else if (cmd === 'doctor') {
     const { doctor } = await import('../src/doctor.mjs');
     process.exitCode = (await doctor()).ok ? 0 : 1;

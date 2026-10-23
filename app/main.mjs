@@ -32,6 +32,12 @@ setup.useRuntime({ command: process.execPath, args: [join(SERVER_DIR, 'server.mj
 
 const CLIENT_LABELS = { 'claude-code': 'Claude Code', 'claude-desktop': 'Claude Desktop', cursor: 'Cursor', codex: 'Codex CLI' };
 
+function requireInstalledApp() {
+  if (app.isPackaged && !app.isInApplicationsFolder()) {
+    throw new Error('Copy Photoshop MCP to Applications, eject the installer, and open the installed app before connecting. This prevents saving a temporary installer path.');
+  }
+}
+
 // ---------------------------------------------------------------- settings
 
 const readSettings = () => { try { return JSON.parse(readFileSync(SETTINGS, 'utf8')); } catch { return {}; } };
@@ -92,6 +98,7 @@ function photoshopApp() {
 ipcMain.handle('state', async () => ({
   version: PKG.version,
   packaged: app.isPackaged,
+  installed: !app.isPackaged || app.isInApplicationsFolder(),
   serverPath: join(SERVER_DIR, 'server.mjs'),
   photoshop: await photoshopState(),
   registrations: doctor.registrations(),
@@ -100,13 +107,14 @@ ipcMain.handle('state', async () => ({
   clients: CLIENT_LABELS,
 }));
 ipcMain.handle('connect', (_e, id) => {
+  requireInstalledApp();
   const exec = !!readSettings().exec;
   const status = setup.connect(id, exec);
   if (id === 'claude-code') setup.setup({ clients: [], skill: true, bin: false, log: () => {} }).catch(() => {});
   return status || `${CLIENT_LABELS[id]} is not installed on this Mac`;
 });
 ipcMain.handle('disconnect', (_e, id) => setup.disconnect(id) || 'was not connected');
-ipcMain.handle('copyJson', () => { const j = JSON.stringify({ mcpServers: { photoshop: setup.serverEntry(!!readSettings().exec) } }, null, 2); clipboard.writeText(j); return j; });
+ipcMain.handle('copyJson', () => { requireInstalledApp(); const j = JSON.stringify({ mcpServers: { photoshop: setup.serverEntry(!!readSettings().exec) } }, null, 2); clipboard.writeText(j); return j; });
 ipcMain.handle('doctor', () => doctor.doctor({ print: false }));
 ipcMain.handle('activity', (_e, limit) => activity(limit));
 ipcMain.handle('gallery', () => gallery());
@@ -128,6 +136,10 @@ ipcMain.handle('settings', (_e, patch) => {
 
 let win = null, tray = null, quitting = false;
 
+// win stays referenced after Electron destroys it on quit; touching webContents then throws "Object has been destroyed".
+const liveWin = () => (win && !win.isDestroyed() ? win : null);
+const notifyActivity = () => liveWin()?.webContents.send('activity:changed');
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1120, height: 740, minWidth: 900, minHeight: 600, show: false,
@@ -142,6 +154,7 @@ function createWindow() {
     win.webContents.once('did-finish-load', () => {
       win.webContents.send('ui:tab', tab);
       setTimeout(async () => {
+        if (!liveWin()) return;
         const img = await win.webContents.capturePage();
         writeFileSync(shot.slice(13), img.toPNG());
         quitting = true; app.quit();
@@ -155,8 +168,8 @@ function createWindow() {
 
   // Push log changes to the renderer (debounced).
   let timer = null;
-  try { watch(bridge.LOG_DIR, () => { clearTimeout(timer); timer = setTimeout(() => win?.webContents.send('activity:changed'), 300); }); } catch {}
-  try { watch(RENDERS, () => { clearTimeout(timer); timer = setTimeout(() => win?.webContents.send('activity:changed'), 300); }); } catch {}
+  try { watch(bridge.LOG_DIR, () => { clearTimeout(timer); timer = setTimeout(notifyActivity, 300); }); } catch {}
+  try { watch(RENDERS, () => { clearTimeout(timer); timer = setTimeout(notifyActivity, 300); }); } catch {}
 }
 
 function updateTray() {
@@ -164,8 +177,8 @@ function updateTray() {
   const paused = existsSync(tools.PAUSE_FILE);
   tray.setToolTip(`Photoshop MCP${paused ? ' — edits paused' : ''}`);
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Open Photoshop MCP', click: () => { win?.show(); win?.focus(); } },
-    { label: paused ? 'Resume edits' : 'Pause edits (kill switch)', click: () => { if (paused) unlinkSync(tools.PAUSE_FILE); else writeFileSync(tools.PAUSE_FILE, new Date().toISOString()); updateTray(); win?.webContents.send('activity:changed'); } },
+    { label: 'Open Photoshop MCP', click: () => { liveWin()?.show(); liveWin()?.focus(); } },
+    { label: paused ? 'Resume edits' : 'Pause edits (kill switch)', click: () => { if (paused) unlinkSync(tools.PAUSE_FILE); else writeFileSync(tools.PAUSE_FILE, new Date().toISOString()); updateTray(); notifyActivity(); } },
     { type: 'separator' },
     { label: `Version ${PKG.version}`, enabled: false },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } },
@@ -178,9 +191,9 @@ app.whenReady().then(() => {
   const icon = nativeImage.createFromPath(join(HERE, 'build/trayTemplate.png'));
   icon.setTemplateImage(true);
   tray = new Tray(icon);
-  tray.on('click', () => { win?.show(); win?.focus(); });
+  tray.on('click', () => { liveWin()?.show(); liveWin()?.focus(); });
   updateTray();
 });
-app.on('activate', () => { win?.show(); });
+app.on('activate', () => { liveWin()?.show(); });
 app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => {});   // keep running in the menu bar
