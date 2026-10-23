@@ -1,3 +1,17 @@
+# 1.2.1 — source installation and release reliability (unreleased)
+
+- Make the GitHub/source installation the recommended path; document requirements, first-use steps, data handling, troubleshooting and removal.
+- Install source dependencies from the lockfile; validate Node/npm and missing client arguments. Separate successful configuration from live Photoshop readiness checks.
+- Preserve other client configuration and refuse invalid JSON object shapes.
+- Replace disabled desktop signing with a fail-closed Developer ID/notarization pipeline. Explicit local builds use complete ad-hoc signatures and `-unnotarized` filenames.
+- Verify the app inside each final DMG and regenerate checksums only after verification. Smoke-test the bundled MCP runtime on the host architecture.
+- Include server dependencies explicitly in the desktop bundle; the old resource mapping omitted node_modules and only worked when repository dependencies were available nearby.
+- Make the integration test runner report an unavailable Photoshop connection without crashing.
+- Declare the Photoshop Automation usage description and signing entitlements.
+- Prevent registering temporary DMG runtime paths; recover the Connect UI after errors; handle image filenames containing quotes, # or ?.
+- Preserve the existing desktop shutdown/window-lifetime fix.
+- Notarized public binaries and clean-machine download testing remain pending signing credentials and release verification.
+
 # Changelog
 
 ## 1.2.0 — fixes from a real 40-document editing session + install for everyone (2026-10-11)

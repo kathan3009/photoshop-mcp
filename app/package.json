@@ -1,15 +1,15 @@
 {
   "name": "photoshop-mcp-app",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
-  "description": "Photoshop MCP — desktop app that bundles the server, connects it to Claude/Cursor/Codex and shows what the agent does in Photoshop",
+  "description": "Photoshop MCP \u2014 desktop app that bundles the server, connects it to Claude/Cursor/Codex and shows what the agent does in Photoshop",
   "main": "main.mjs",
   "type": "module",
   "scripts": {
     "start": "electron .",
     "prepare-server": "node scripts/prepare-server.mjs",
-    "dist": "npm run prepare-server && electron-builder --mac",
-    "shots": "node scripts/screenshots.mjs"
+    "dist": "node scripts/release.mjs",
+    "dist:local": "node scripts/release.mjs --local"
   },
   "devDependencies": {
     "electron": "^44.7.0",
@@ -18,20 +18,59 @@
   "build": {
     "appId": "dev.kathan.photoshop-mcp",
     "productName": "Photoshop MCP",
-    "copyright": "MIT © Kathan",
+    "copyright": "MIT \u00a9 Kathan",
     "npmRebuild": false,
-    "files": ["main.mjs", "preload.cjs", "renderer/**", "build/trayTemplate*.png", "package.json"],
-    "extraResources": [{ "from": "server", "to": "server" }],
+    "files": [
+      "main.mjs",
+      "preload.cjs",
+      "renderer/**",
+      "build/trayTemplate*.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "server",
+        "to": "server"
+      },
+      {
+        "from": "server/node_modules",
+        "to": "server/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
-      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
-      "identity": null,
-      "hardenedRuntime": false,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
       "artifactName": "Photoshop-MCP-${version}-${arch}.${ext}",
-      "extendInfo": { "LSUIElement": false }
+      "extendInfo": {
+        "LSUIElement": false,
+        "NSAppleEventsUsageDescription": "Photoshop MCP needs permission to control Adobe Photoshop to inspect documents and apply the edits you request."
+      },
+      "notarize": true,
+      "minimumSystemVersion": "13.0",
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
-    "dmg": { "artifactName": "Photoshop-MCP-${version}-${arch}.${ext}", "writeUpdateInfo": false },
-    "directories": { "output": "dist" }
-  }
+    "dmg": {
+      "artifactName": "Photoshop-MCP-${version}-${arch}.${ext}",
+      "writeUpdateInfo": false
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "forceCodeSigning": true
+  },
+  "author": "Kathan"
 }
